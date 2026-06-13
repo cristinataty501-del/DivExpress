@@ -1,23 +1,23 @@
 <?php
-session_start();
-include 'config.php';
+      include 'config.php';
+      $admin_id = $_SESSION['admin_id'];
+      
+      $select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE id = '$admin_id'") or die('falha na consulta');   
+      $row = mysqli_fetch_assoc($select_users);
 
-/* =========================
-   PROTEGER ACESSO
-========================= */
-$admin_id = $_SESSION['admin_id'] ?? null;
+   
+      
 
-if (!$admin_id) {
-   header('location:login.php');
-   exit();
+if(isset($message)){
+   foreach($message as $message){
+      echo '
+      <div class="message">
+         <span>'.$message.'</span>
+         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
+      </div>
+      ';
+   }
 }
-
-/* =========================
-   BUSCAR DADOS DO ADMIN
-========================= */
-$select_users = mysqli_query($conn, "SELECT * FROM users WHERE id = '$admin_id'");
-
-$row = mysqli_fetch_assoc($select_users);
 ?>
 
 <!DOCTYPE html>
