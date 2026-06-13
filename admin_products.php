@@ -1,19 +1,19 @@
 <?php
 // NO HTML OR WHITESPACE BEFORE THIS LINE
-if(!isset($_SESSION)) {
-    session_start();
-}
+session_start();
+include 'config.php';
 
 // Check if admin is logged in
 if(!isset($_SESSION['admin_id'])){
    header('location:login.php');
-   exit();
+   exit(); // Always call exit after header redirect
 }
 
 $admin_id = $_SESSION['admin_id'];
 
 // Get admin info
-$select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE id = '$admin_id'") or die('falha na consulta');   
+$select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE id = '$admin_id'") or die('query failed');
+
 if(mysqli_num_rows($select_users) > 0){
    $row = mysqli_fetch_assoc($select_users);
 } else {
@@ -21,272 +21,332 @@ if(mysqli_num_rows($select_users) > 0){
    exit();
 }
 
+// Handle add product
+if(isset($_POST['add_product'])){
+   $name = mysqli_real_escape_string($conn, $_POST['name']);
+   $price = $_POST['price'];
+   $quantity = $_POST['quantity'];
+   $descricao = mysqli_real_escape_string($conn, $_POST['descricao']);
+   $category = mysqli_real_escape_string($conn, $_POST['category']);
+   $image = $_FILES['image']['name'];
+   $image_size = $_FILES['image']['size'];
+   $image_tmp_name = $_FILES['image']['tmp_name'];
+   $image_folder = 'uploaded_img/'.$image;
+
+   $select_product_name = mysqli_query($conn, "SELECT name FROM `products` WHERE name = '$name'") or die('query failed');
+
+   if(mysqli_num_rows($select_product_name) > 0){
+      $message[] = 'product name already added';
+   } else {
+      $add_product_query = mysqli_query($conn, "INSERT INTO `products`(name, admin_id, price, quantity, descricao, category, image) VALUES('$name', '$admin_id', '$price', '$quantity', '$descricao', '$category','$image')") or die('query failed');
+
+      if($add_product_query){
+         if($image_size > 2000000){
+            $message[] = 'image size is too large';
+         } else {
+            move_uploaded_file($image_tmp_name, $image_folder);
+            $message[] = 'product added successfully!';
+         }
+      } else {
+         $message[] = 'product could not be added!';
+      }
+   }
+}
+
+// Handle delete product
+if(isset($_GET['delete'])){
+   $delete_id = $_GET['delete'];
+   $delete_image_query = mysqli_query($conn, "SELECT image FROM `products` WHERE id = '$delete_id'") or die('query failed');
+   $fetch_delete_image = mysqli_fetch_assoc($delete_image_query);
+   if($fetch_delete_image && file_exists('uploaded_img/'.$fetch_delete_image['image'])){
+      unlink('uploaded_img/'.$fetch_delete_image['image']);
+   }
+   mysqli_query($conn, "DELETE FROM `products` WHERE id = '$delete_id'") or die('query failed');
+   header('location:admin_products.php');
+   exit();
+}
+
+// Handle update product
+if(isset($_POST['update_product'])){
+   $update_p_id = $_POST['update_p_id'];
+   $update_name = $_POST['update_name'];
+   $update_price = $_POST['update_price'];
+   $update_descricao = $_POST['update_descricao'];
+
+   mysqli_query($conn, "UPDATE `products` SET name = '$update_name', price = '$update_price', descricao = '$update_descricao' WHERE id = '$update_p_id'") or die('query failed');
+
+   $update_image = $_FILES['update_image']['name'];
+   $update_image_tmp_name = $_FILES['update_image']['tmp_name'];
+   $update_image_size = $_FILES['update_image']['size'];
+   $update_folder = 'uploaded_img/'.$update_image;
+   $update_old_image = $_POST['update_old_image'];
+
+   if(!empty($update_image)){
+      if($update_image_size > 2000000){
+         $message[] = 'image file size is too large';
+      } else {
+         mysqli_query($conn, "UPDATE `products` SET image = '$update_image' WHERE id = '$update_p_id'") or die('query failed');
+         move_uploaded_file($update_image_tmp_name, $update_folder);
+         if(file_exists('uploaded_img/'.$update_old_image)){
+            unlink('uploaded_img/'.$update_old_image);
+         }
+      }
+   }
+
+   header('location:admin_products.php');
+   exit();
+}
+
+// Display messages
 if(isset($message)){
-   foreach($message as $message){
-      echo '
-      <div class="message">
-         <span>'.$message.'</span>
-         <i class="fas fa-times" onclick="this.parentElement.remove();"></i>
-      </div>
-      ';
+   foreach($message as $msg){
+      echo '<div class="message"><span>'.$msg.'</span><i class="fas fa-times" onclick="this.parentElement.remove();"></i></div>';
    }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel do Administrador</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<style>
-/* ================= ROOT ================= */
-:root{
-   --blue1:#0f172a;
-   --blue2:#1d4ed8;
-   --blue3:#2563eb;
-   --blue4:#3b82f6;
-   --bg:#f1f5f9;
-   --white:#fff;
-   --text:#cbd5e1;
-   --shadow:0 20px 50px rgba(0,0,0,.12);
-}
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Admin Products</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <style>
+   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* ================= RESET ================= */
-*{
-   margin:0;
-   padding:0;
-   box-sizing:border-box;
-   font-family:'Poppins', sans-serif;
-   text-decoration:none;
-}
-
-/* ================= BODY ================= */
-body{
-   display:flex;
-   background:var(--bg);
-}
-
-/* ================= SIDEBAR ================= */
-.sidebar{
-   width:280px;
-   height:100vh;
-   background:linear-gradient(180deg,var(--blue1),#1e3a8a);
-   position:fixed;
-   left:0;
-   top:0;
-   display:flex;
-   flex-direction:column;
-   padding:25px;
-   z-index:100;
-}
-
-/* LOGO */
-.logo{
-   display: flex;
-   font-size:22px;
-   font-weight:800;
-   color:#fff;
-   margin-bottom:35px;
-   justify-content:space-between;
-   align-items:center;
-}
-
-.logo span{
-   color:var(--blue4);
-}
-
-.logo .ico i{
-   font-size:22px;
-   cursor:pointer;
-}
-
-/* MENU */
-.menu{
-   flex:1;
-}
-
-.menu a{
-   display:flex;
-   align-items:center;
-   gap:10px;
-   padding:12px 14px;
-   color:var(--text);
-   border-radius:10px;
-   margin-bottom:10px;
-   transition:.3s;
-   font-size:14px;
-}
-
-.menu a:hover{
-   background:rgba(59,130,246,.25);
-   color:#fff;
-   transform:translateX(6px);
-}
-
-/* ACTIVE STYLE */
-.menu a.active{
-   background:var(--blue3);
-   color:#fff;
-}
-
-/* ================= LOGOUT (ABAIXO FIXO) ================= */
-.logout{
-   margin-top:auto;
-   border-top:1px solid rgba(255,255,255,.1);
-   padding-top:15px;
-}
-
-.logout a{
-   display:flex;
-   align-items:center;
-   gap:10px;
-   padding:12px 14px;
-   background:#ef4444;
-   color:#fff;
-   border-radius:10px;
-   font-weight:600;
-   transition:.3s;
-}
-
-.logout a:hover{
-   background:#dc2626;
-   transform:scale(1.02);
-}
-
-/* ================= ACCOUNT BOX ================= */
-.account-box{
-   position:absolute;
-   left:300px;
-   top:70px;
-   width:320px;
-   background:#fff;
-   border-radius:16px;
-   box-shadow:var(--shadow);
-   padding:20px;
-   display:none;
-   border-top:4px solid var(--blue3);
-   z-index:1000;
-}
-
-.account-header{
-   display:flex;
-   align-items:center;
-   gap:10px;
-   margin-bottom:15px;
-   color:var(--blue3);
-}
-
-.account-box p{
-   margin:10px 0;
-   font-size:14px;
-   color:#64748b;
-}
-
-.account-box span{
-   color:#0f172a;
-   font-weight:600;
-}
-
-/* ================= RESPONSIVO ================= */
-@media(max-width:768px){
-   .sidebar{
-      width:70px;
-      padding:15px;
-   }
-
-   .menu a span,
-   .logo span{
-      display:none;
+   *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Poppins, sans-serif;
    }
 
    body{
-      margin-left:0;
+      background:#f1f5f9;
    }
-}
 
-.message{
-   position:fixed;
-   top:20px;
-   right:20px;
-   background:#fff;
-   padding:15px 20px;
-   border-radius:8px;
-   box-shadow:0 4px 12px rgba(0,0,0,.15);
-   display:flex;
-   align-items:center;
-   gap:15px;
-   z-index:1001;
-}
-</style>
+   .form-box{
+      background:#fff;
+      padding:20px;
+      border-radius:14px;
+      box-shadow:0 8px 20px rgba(0,0,0,.06);
+      width:100%;
+      max-width:500px;
+      margin:20px auto;
+   }
+
+   .form-box h3{
+      text-align:center;
+      margin-bottom:15px;
+      color:#2563eb;
+   }
+
+   .box{
+      width:100%;
+      padding:10px;
+      margin:8px 0;
+      border:1px solid #e2e8f0;
+      border-radius:8px;
+      outline:none;
+   }
+
+   .btn{
+      width:100%;
+      padding:12px;
+      background:#2563eb;
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+   }
+
+   .grid{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap: 10px;
+      padding:20px;
+      max-width:1100px;
+      margin:0 auto;
+   }
+
+   @media(max-width:900px){
+      .grid{ grid-template-columns:repeat(2, 1fr); }
+   }
+
+   @media(max-width:600px){
+      .grid{ grid-template-columns:1fr; }
+   }
+
+   .card{
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
+      padding:12px;
+      text-align:center;
+   }
+
+   .card img{
+      width:100%;
+      height:160px;
+      object-fit:cover;
+      border-radius:10px;
+   }
+
+   .name{
+      margin-top:10px;
+      font-weight:600;
+      color:#0f172a;
+   }
+
+   .price{
+      color:#2563eb;
+      font-weight:700;
+      margin:6px 0;
+   }
+
+   .actions{
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      margin-top:10px;
+   }
+
+   .actions a{
+      flex:1;
+      padding:8px;
+      border-radius:8px;
+      font-size:13px;
+      text-decoration:none;
+      font-weight:600;
+   }
+
+   .update{
+      background:#dbeafe;
+      color:#2563eb;
+   }
+
+   .delete{
+      background:#fee2e2;
+      color:#dc2626;
+   }
+
+   .empty{
+      text-align:center;
+      grid-column:1/-1;
+      color:#64748b;
+      padding:20px;
+   }
+
+   .message{
+      position:fixed;
+      top:20px;
+      right:20px;
+      background:#fff;
+      padding:15px 20px;
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      gap:15px;
+      z-index:1000;
+   }
+   </style>
 </head>
 <body>
 
-<!-- ================= SIDEBAR ================= -->
-<div class="sidebar">
+<?php include 'admin_header.php'; ?>
 
-   <div class="logo">Admin<span>Painel</span> <div class="ico"><i id="user-btn" class="fas fa-user-circle" style = "color: white;"></i></div></div>
-
-   <!-- ACCOUNT BOX -->
-   <div class="account-box">
-
-      <div class="account-header">
-         <i class="fas fa-user-shield"></i>
-         <h3>Conta do Administrador</h3>
-      </div>
-      <p>Nome de usuário: <span><?php echo isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : ''; ?></span></p>
-      <p>Email: <span><?php echo isset($_SESSION['admin_email']) ? $_SESSION['admin_email'] : ''; ?></span></p>
-      <p>iban: <span>AO06 0006 0000 70768961301 75</span></p>
-      <p>Express: <span>928884069</span></p>
-      <p>Tipo:
-         <span>
-            <?php if (isset($row['user_type'])){ 
-               if($row['user_type'] == 'admin'){ ?>
-               Administrador
-            <?php } elseif($row['user_type'] == 'vendf'){ ?>
-               Vendedor físico
-            <?php } elseif($row['user_type'] == 'vendemp'){ ?>
-               Empresa
-            <?php } ?>
-         <?php } ?>
-         </span>
-      </p>
-
-   </div>
-
-   <div class="menu">
-      <a href="admin_page.php"><i class="fas fa-home"></i> <span>Início</span></a>
-      <a href="admin_products.php"><i class="fas fa-box"></i> <span>Produtos</span></a>
-      <a href="admin_orders.php"><i class="fas fa-shopping-cart"></i> <span>Pedidos</span></a>
-
-      <?php if (isset($row['user_type']) && $row['user_type'] == 'admin'){ ?>
-         <a href="admin_users.php"><i class="fas fa-users"></i> <span>Usuários</span></a>
-      <?php } ?>
-
-      <a href="admin_contacts.php"><i class="fas fa-envelope"></i> <span>Mensagens</span></a>
-   </div>
-
-   <!-- LOGOUT EM BAIXO -->
-   <div class="logout">
-      <a href="logout.php">
-         <i class="fas fa-sign-out-alt"></i>
-         <span>Sair</span>
-      </a>
-   </div>
+<div class="form-box">
+   <h3>Adicionar Produto</h3>
+   <form action="" method="post" enctype="multipart/form-data">
+      <input type="text" name="name" class="box" placeholder="Nome do produto" required>
+      <input type="number" name="price" class="box" placeholder="Preço" required>
+      <input type="number" name="quantity" class="box" placeholder="Quantidade" required>
+      <input type="text" name="descricao" class="box" placeholder="Descrição" required>
+      <select name="category" class="box">
+         <option value="electronico">electrónicos</option>
+         <option value="roupas">Roupas</option>
+         <option value="calcados">Calçados</option>
+         <option value="acessorios">Acessórios</option>
+         <option value="mobilias">Mobilias</option>
+         <option value="veiculos">Veiculos</option>
+      </select>
+      <input type="file" name="image" class="box" required>
+      <input type="submit" value="Adicionar Produto" name="add_product" class="btn">
+   </form>
 </div>
 
-<script>
-let userBtn = document.querySelector('#user-btn');
-let accountBox = document.querySelector('.account-box');
+<?php
+if(isset($_GET['update'])){
+   $update_id = $_GET['update'];
+   $update_query = mysqli_query($conn, "SELECT * FROM `products` WHERE id = '$update_id'") or die('query failed');
+   
+   if(mysqli_num_rows($update_query) > 0){
+      while($fetch_update = mysqli_fetch_assoc($update_query)){
+?>
 
-if(userBtn){
-   userBtn.onclick = () => {
-      if(accountBox){
-         accountBox.style.display = accountBox.style.display === 'block' ? 'none' : 'block';
+<div class="form-box">
+   <h3>Atualizar Produto</h3>
+   <form action="" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="update_p_id" value="<?php echo $fetch_update['id']; ?>">
+      <input type="hidden" name="update_old_image" value="<?php echo $fetch_update['image']; ?>">
+      <input type="text" name="update_name" value="<?php echo $fetch_update['name']; ?>" class="box" required>
+      <input type="text" name="update_descricao" value="<?php echo $fetch_update['descricao']; ?>" class="box" required>
+      <input type="number" name="update_price" value="<?php echo $fetch_update['price']; ?>" class="box" required>
+      <img src="uploaded_img/<?php echo $fetch_update['image']; ?>" width="120" style="margin:10px 0; border-radius:10px;">
+      <input type="file" name="update_image" class="box">
+      <input type="submit" value="Atualizar Produto" name="update_product" class="btn">
+      <a href="admin_products.php" style="display:block; text-align:center; margin-top:10px; background:#e2e8f0; padding:10px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;">Cancelar</a>
+   </form>
+</div>
+
+<?php
       }
    }
 }
+?>
+
+<div class="grid">
+   <?php
+   if($row['user_type'] == 'admin'){
+      $select_products = mysqli_query($conn, "SELECT * FROM `products`") or die('query failed');
+   } else {
+      $select_products = mysqli_query($conn, "SELECT * FROM `products` WHERE admin_id = '$admin_id'") or die('query failed');
+   }
+   
+   if(mysqli_num_rows($select_products) > 0){
+      while($fetch_products = mysqli_fetch_assoc($select_products)){
+   ?>
+   
+   <div class="card">
+      <img src="uploaded_img/<?php echo $fetch_products['image']; ?>" alt="">
+      <div class="name"><?php echo $fetch_products['name']; ?></div>
+      <div class="name"><?php echo $fetch_products['descricao']; ?></div>
+      <div class="price">Kz<?php echo $fetch_products['price']; ?></div>
+      <div class="actions">
+         <a href="admin_products.php?update=<?php echo $fetch_products['id']; ?>" class="update">Editar</a>
+         <a href="admin_products.php?delete=<?php echo $fetch_products['id']; ?>" class="delete" onclick="return confirm('Tem certeza que deseja apagar este produto?');">Apagar</a>
+      </div>
+   </div>
+   
+   <?php
+      }
+   } else {
+      echo '<p class="empty">Nenhum produto encontrado</p>';
+   }
+   ?>
+</div>
+
+<script>
+// Auto-hide messages after 3 seconds
+setTimeout(function(){
+   const messages = document.querySelectorAll('.message');
+   messages.forEach(function(message){
+      message.style.display = 'none';
+   });
+}, 3000);
 </script>
 
 </body>
