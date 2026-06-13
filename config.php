@@ -1,14 +1,14 @@
 <?php
 
-$host = getenv('DB_HOST');
-$user = getenv('DB_USER');
-$pass = getenv('DB_PASSWORD');
-$db   = getenv('DB_NAME');
+$host = "dpg-d8ml628k1i2s738sggu0-a";
+$user = "divexpress_db_user";
+$pass = "4Xsaz7fLa2aafUJcs9aVfwb56qfdaxol";
+$db   = "divexpress_db";
 
 $conn = mysqli_connect($host, $user, $pass, $db);
 
 if (!$conn) {
-    die('Connection failed: ' . mysqli_connect_error());
+    die("Erro: " . mysqli_connect_error());
 }
 
 ?>
