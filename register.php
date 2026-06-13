@@ -23,7 +23,7 @@ if(isset($_POST['submit'])){
          $message[] = 'confirm password not matched!';
       }else{
          $cpass = md5($cpass);
-         mysqli_query($conn, "INSERT INTO `users`(name, email, password, user_type) VALUES('$name', '$email', '$cpassword', '$user_type')") or die('query failed');
+         mysqli_query($conn, "INSERT INTO `users`(name, email, password, user_type) VALUES('$name', '$email', '$cpass','$pass', '$user_type')") or die('query failed');
          $message[] = 'registered successfully!';
          header('location:login.php');
       }
