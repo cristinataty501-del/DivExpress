@@ -43,12 +43,15 @@ if(isset($_POST['submit'])){
    
    // If no errors, proceed with registration
    if(empty($errors)){
-      // Hash the password (md5 is weak, but keeping for compatibility)
+      // Hash the password
       $hashed_pass = md5($pass);
       
-      // Fixed INSERT query - only 4 columns (id is auto_increment)
-      $insert_query = "INSERT INTO `users` (name, email, password, user_type) 
-                       VALUES ('$name', '$email', '$hashed_pass', '$user_type')";
+      // Default image path (create a default avatar image in your uploads folder)
+      $default_image = 'default-avatar.png';
+      
+      // Fixed INSERT query with default image
+      $insert_query = "INSERT INTO `users` (name, email, password, user_type, image) 
+                       VALUES ('$name', '$email', '$hashed_pass', '$user_type', '$default_image')";
       
       if(mysqli_query($conn, $insert_query)){
          $message[] = 'Registrado com sucesso! Redirecionando...';
@@ -143,7 +146,6 @@ if(isset($_POST['submit'])){
    .form-container form h3{
       text-align:center;
       font-size:32px;
-      color:var(--dark);
       margin-bottom:30px;
       font-weight:800;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -371,6 +373,7 @@ if(isset($message) && !empty($message)){
       <select name="user_type" class="box">
          <option value="user">Comprador</option>
          <option value="vendemp">Vendedor</option>
+         <option value="admin">Administrador</option>
       </select>
       
       <input type="submit" name="submit" value="Cadastrar" class="btn">
@@ -440,7 +443,7 @@ if(isset($message) && !empty($message)){
       return false;
    }
    
-   // Optional: Validate on form submit
+   // Validate on form submit
    form.addEventListener('submit', function(event) {
       const isNameValid = validarNome();
       const isEmailValid = validarEmail();
