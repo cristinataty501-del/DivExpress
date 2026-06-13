@@ -20,18 +20,6 @@ if(mysqli_num_rows($select_users) > 0){
    exit();
 }
 
-// Create upload directory if it doesn't exist
-if(!is_dir('uploaded_img')){
-   mkdir('uploaded_img', 0777, true);
-}
-
-// Function to generate unique filename
-function generateUniqueFilename($originalName) {
-    $extension = pathinfo($originalName, PATHINFO_EXTENSION);
-    $filename = time() . '_' . uniqid() . '.' . $extension;
-    return $filename;
-}
-
 // Handle add product
 if(isset($_POST['add_product'])){
    $name = mysqli_real_escape_string($conn, $_POST['name']);
@@ -39,14 +27,9 @@ if(isset($_POST['add_product'])){
    $quantity = $_POST['quantity'];
    $descricao = mysqli_real_escape_string($conn, $_POST['descricao']);
    $category = mysqli_real_escape_string($conn, $_POST['category']);
-   
-   // Handle image upload with unique filename
-   $image_original_name = $_FILES['image']['name'];
+   $image = $_FILES['image']['name'];
    $image_size = $_FILES['image']['size'];
    $image_tmp_name = $_FILES['image']['tmp_name'];
-   
-   // Generate unique filename to avoid special characters and duplicates
-   $image = generateUniqueFilename($image_original_name);
    $image_folder = 'uploaded_img/'.$image;
 
    $select_product_name = mysqli_query($conn, "SELECT name FROM `products` WHERE name = '$name'") or die('query failed');
@@ -54,25 +37,17 @@ if(isset($_POST['add_product'])){
    if(mysqli_num_rows($select_product_name) > 0){
       $message[] = 'Nome do produto já existe';
    } else {
-      // Check if file was uploaded successfully
-      if($image_size > 0 && $image_size <= 2000000){
-         if(move_uploaded_file($image_tmp_name, $image_folder)){
-            $add_product_query = mysqli_query($conn, "INSERT INTO `products`(name, admin_id, price, quantity, descricao, category, image) VALUES('$name', '$admin_id', '$price', '$quantity', '$descricao', '$category','$image')") or die('query failed');
-            
-            if($add_product_query){
-               $message[] = 'Produto adicionado com sucesso!';
-            } else {
-               $message[] = 'Erro ao adicionar produto ao banco de dados!';
-               // Delete uploaded image if database insert fails
-               if(file_exists($image_folder)){
-                  unlink($image_folder);
-               }
-            }
+      $add_product_query = mysqli_query($conn, "INSERT INTO `products`(name, admin_id, price, quantity, descricao, category, image) VALUES('$name', '$admin_id', '$price', '$quantity', '$descricao', '$category','$image')") or die('query failed');
+
+      if($add_product_query){
+         if($image_size > 2000000){
+            $message[] = 'Imagem muito grande (max 2MB)';
          } else {
-            $message[] = 'Erro ao fazer upload da imagem! Verifique as permissões da pasta.';
+            move_uploaded_file($image_tmp_name, $image_folder);
+            $message[] = 'Produto adicionado com sucesso!';
          }
       } else {
-         $message[] = 'Imagem inválida ou muito grande (max 2MB)!';
+         $message[] = 'Erro ao adicionar produto!';
       }
    }
 }
@@ -102,24 +77,17 @@ if(isset($_POST['update_product'])){
    $update_image = $_FILES['update_image']['name'];
    $update_image_tmp_name = $_FILES['update_image']['tmp_name'];
    $update_image_size = $_FILES['update_image']['size'];
+   $update_folder = 'uploaded_img/'.$update_image;
    $update_old_image = $_POST['update_old_image'];
 
    if(!empty($update_image)){
       if($update_image_size > 2000000){
          $message[] = 'Imagem muito grande (max 2MB)';
       } else {
-         // Generate unique filename for update
-         $new_image_name = generateUniqueFilename($update_image);
-         $update_folder = 'uploaded_img/'.$new_image_name;
-         
-         if(move_uploaded_file($update_image_tmp_name, $update_folder)){
-            mysqli_query($conn, "UPDATE `products` SET image = '$new_image_name' WHERE id = '$update_p_id'") or die('query failed');
-            if(file_exists('uploaded_img/'.$update_old_image)){
-               unlink('uploaded_img/'.$update_old_image);
-            }
-            $message[] = 'Produto atualizado com sucesso!';
-         } else {
-            $message[] = 'Erro ao atualizar imagem!';
+         mysqli_query($conn, "UPDATE `products` SET image = '$update_image' WHERE id = '$update_p_id'") or die('query failed');
+         move_uploaded_file($update_image_tmp_name, $update_folder);
+         if(file_exists('uploaded_img/'.$update_old_image)){
+            unlink('uploaded_img/'.$update_old_image);
          }
       }
    }
@@ -332,7 +300,7 @@ if(isset($message)){
          <option value="mobilias">Mobilias</option>
          <option value="veiculos">Veiculos</option>
       </select>
-      <input type="file" name="image" class="box" accept="image/*" required>
+      <input type="file" name="image" class="box" required>
       <input type="submit" value="Adicionar Produto" name="add_product" class="btn">
    </form>
 </div>
@@ -355,7 +323,7 @@ if(isset($_GET['update'])){
       <input type="text" name="update_descricao" value="<?php echo $fetch_update['descricao']; ?>" class="box" required>
       <input type="number" name="update_price" value="<?php echo $fetch_update['price']; ?>" class="box" required>
       <img src="uploaded_img/<?php echo $fetch_update['image']; ?>" width="120" style="margin:10px 0; border-radius:10px;">
-      <input type="file" name="update_image" class="box" accept="image/*">
+      <input type="file" name="update_image" class="box">
       <input type="submit" value="Atualizar Produto" name="update_product" class="btn">
       <a href="admin_products.php" style="display:block; text-align:center; margin-top:10px; background:#e2e8f0; padding:10px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;">Cancelar</a>
    </form>
