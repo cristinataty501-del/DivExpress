@@ -1,5 +1,4 @@
 <?php
-// NO HTML OR WHITESPACE BEFORE THIS LINE
 if(!isset($_SESSION)) {
     session_start();
 }
@@ -29,7 +28,7 @@ if(mysqli_num_rows($select_users) > 0){
 <title>Painel do Administrador</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-/* Your CSS styles here - make sure no HTML before PHP tags */
+/* ================= ROOT ================= */
 :root{
    --blue1:#0f172a;
    --blue2:#1d4ed8;
@@ -41,6 +40,7 @@ if(mysqli_num_rows($select_users) > 0){
    --shadow:0 20px 50px rgba(0,0,0,.12);
 }
 
+/* ================= RESET ================= */
 *{
    margin:0;
    padding:0;
@@ -49,11 +49,13 @@ if(mysqli_num_rows($select_users) > 0){
    text-decoration:none;
 }
 
+/* ================= BODY ================= */
 body{
    display:flex;
    background:var(--bg);
 }
 
+/* ================= SIDEBAR ================= */
 .sidebar{
    width:280px;
    height:100vh;
@@ -64,8 +66,10 @@ body{
    display:flex;
    flex-direction:column;
    padding:25px;
+   z-index:100;
 }
 
+/* LOGO */
 .logo{
    display: flex;
    font-size:22px;
@@ -85,6 +89,7 @@ body{
    cursor:pointer;
 }
 
+/* MENU */
 .menu{
    flex:1;
 }
@@ -107,6 +112,7 @@ body{
    transform:translateX(6px);
 }
 
+/* ================= LOGOUT (ABAIXO FIXO) ================= */
 .logout{
    margin-top:auto;
    border-top:1px solid rgba(255,255,255,.1);
@@ -127,13 +133,10 @@ body{
 
 .logout a:hover{
    background:#dc2626;
+   transform:scale(1.02);
 }
 
-.main{
-   margin-left:280px;
-   width:100%;
-}
-
+/* ================= ACCOUNT BOX ================= */
 .account-box{
    position:absolute;
    left:300px;
@@ -166,16 +169,33 @@ body{
    color:#0f172a;
    font-weight:600;
 }
+
+/* ================= RESPONSIVO ================= */
+@media(max-width:768px){
+   .sidebar{
+      width:70px;
+      padding:15px;
+   }
+
+   .menu a span,
+   .logo span{
+      display:none;
+   }
+
+   body{
+      margin-left:0;
+   }
+}
 </style>
 </head>
 <body>
 
+<!-- ================= SIDEBAR ================= -->
 <div class="sidebar">
-   <div class="logo">
-      Admin<span>Painel</span>
-      <div class="ico"><i id="user-btn" class="fas fa-user-circle" style="color: white;"></i></div>
-   </div>
 
+   <div class="logo">Admin<span>Painel</span> <div class="ico"><i id="user-btn" class="fas fa-user-circle" style = "color: white;"></i></div></div>
+
+   <!-- ACCOUNT BOX -->
    <div class="account-box">
       <div class="account-header">
          <i class="fas fa-user-shield"></i>
@@ -185,31 +205,34 @@ body{
       <p>Email: <span><?php echo isset($_SESSION['admin_email']) ? $_SESSION['admin_email'] : ''; ?></span></p>
       <p>iban: <span>AO06 0006 0000 70768961301 75</span></p>
       <p>Express: <span>928884069</span></p>
-      <p>Tipo: <span>
-         <?php 
-         if(isset($row['user_type'])){
-            if($row['user_type'] == 'admin'){ 
-               echo 'Administrador';
-            } elseif($row['user_type'] == 'vendf'){ 
-               echo 'Vendedor físico';
-            } elseif($row['user_type'] == 'vendemp'){ 
-               echo 'Empresa';
-            }
-         }
-         ?>
-      </span></p>
+      <p>Tipo:
+         <span>
+            <?php if (isset($row['user_type'])){ 
+               if($row['user_type'] == 'admin'){ ?>
+               Administrador
+            <?php } elseif($row['user_type'] == 'vendf'){ ?>
+               Vendedor físico
+            <?php } elseif($row['user_type'] == 'vendemp'){ ?>
+               Empresa
+            <?php } ?>
+         <?php } ?>
+         </span>
+      </p>
    </div>
 
    <div class="menu">
       <a href="admin_page.php"><i class="fas fa-home"></i> <span>Início</span></a>
       <a href="admin_products.php"><i class="fas fa-box"></i> <span>Produtos</span></a>
       <a href="admin_orders.php"><i class="fas fa-shopping-cart"></i> <span>Pedidos</span></a>
-      <?php if(isset($row['user_type']) && $row['user_type'] == 'admin'){ ?>
+
+      <?php if (isset($row['user_type']) && $row['user_type'] == 'admin'){ ?>
          <a href="admin_users.php"><i class="fas fa-users"></i> <span>Usuários</span></a>
       <?php } ?>
+
       <a href="admin_contacts.php"><i class="fas fa-envelope"></i> <span>Mensagens</span></a>
    </div>
 
+   <!-- LOGOUT EM BAIXO -->
    <div class="logout">
       <a href="logout.php">
          <i class="fas fa-sign-out-alt"></i>

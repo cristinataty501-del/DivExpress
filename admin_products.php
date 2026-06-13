@@ -1,12 +1,11 @@
 <?php
-// NO HTML OR WHITESPACE BEFORE THIS LINE
 session_start();
 include 'config.php';
 
 // Check if admin is logged in
 if(!isset($_SESSION['admin_id'])){
    header('location:login.php');
-   exit(); // Always call exit after header redirect
+   exit();
 }
 
 $admin_id = $_SESSION['admin_id'];
@@ -36,19 +35,19 @@ if(isset($_POST['add_product'])){
    $select_product_name = mysqli_query($conn, "SELECT name FROM `products` WHERE name = '$name'") or die('query failed');
 
    if(mysqli_num_rows($select_product_name) > 0){
-      $message[] = 'product name already added';
+      $message[] = 'Nome do produto já existe';
    } else {
       $add_product_query = mysqli_query($conn, "INSERT INTO `products`(name, admin_id, price, quantity, descricao, category, image) VALUES('$name', '$admin_id', '$price', '$quantity', '$descricao', '$category','$image')") or die('query failed');
 
       if($add_product_query){
          if($image_size > 2000000){
-            $message[] = 'image size is too large';
+            $message[] = 'Imagem muito grande (max 2MB)';
          } else {
             move_uploaded_file($image_tmp_name, $image_folder);
-            $message[] = 'product added successfully!';
+            $message[] = 'Produto adicionado com sucesso!';
          }
       } else {
-         $message[] = 'product could not be added!';
+         $message[] = 'Erro ao adicionar produto!';
       }
    }
 }
@@ -83,7 +82,7 @@ if(isset($_POST['update_product'])){
 
    if(!empty($update_image)){
       if($update_image_size > 2000000){
-         $message[] = 'image file size is too large';
+         $message[] = 'Imagem muito grande (max 2MB)';
       } else {
          mysqli_query($conn, "UPDATE `products` SET image = '$update_image' WHERE id = '$update_p_id'") or die('query failed');
          move_uploaded_file($update_image_tmp_name, $update_folder);
@@ -124,8 +123,25 @@ if(isset($message)){
 
    body{
       background:#f1f5f9;
+      margin-left: 280px;
    }
 
+   /* MESSAGES */
+   .message{
+      position:fixed;
+      top:20px;
+      right:20px;
+      background:#fff;
+      padding:15px 20px;
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      gap:15px;
+      z-index:1000;
+   }
+
+   /* FORM BOX */
    .form-box{
       background:#fff;
       padding:20px;
@@ -160,14 +176,20 @@ if(isset($message)){
       border-radius:8px;
       cursor:pointer;
       font-weight:600;
+      transition: background 0.3s;
    }
 
+   .btn:hover{
+      background:#1d4ed8;
+   }
+
+   /* GRID DE PRODUTOS */
    .grid{
       display:grid;
       grid-template-columns:repeat(3, 1fr);
-      gap: 10px;
+      gap: 20px;
       padding:20px;
-      max-width:1100px;
+      max-width:1200px;
       margin:0 auto;
    }
 
@@ -179,12 +201,18 @@ if(isset($message)){
       .grid{ grid-template-columns:1fr; }
    }
 
+   /* CARD */
    .card{
       background:#fff;
       border-radius:14px;
       box-shadow:0 6px 18px rgba(0,0,0,.06);
       padding:12px;
       text-align:center;
+      transition: transform 0.3s;
+   }
+
+   .card:hover{
+      transform: translateY(-5px);
    }
 
    .card img{
@@ -204,8 +232,10 @@ if(isset($message)){
       color:#2563eb;
       font-weight:700;
       margin:6px 0;
+      font-size:18px;
    }
 
+   /* BOTÕES */
    .actions{
       display:flex;
       gap:8px;
@@ -220,6 +250,7 @@ if(isset($message)){
       font-size:13px;
       text-decoration:none;
       font-weight:600;
+      transition: all 0.3s;
    }
 
    .update{
@@ -227,9 +258,19 @@ if(isset($message)){
       color:#2563eb;
    }
 
+   .update:hover{
+      background:#2563eb;
+      color:#fff;
+   }
+
    .delete{
       background:#fee2e2;
       color:#dc2626;
+   }
+
+   .delete:hover{
+      background:#dc2626;
+      color:#fff;
    }
 
    .empty{
@@ -237,20 +278,6 @@ if(isset($message)){
       grid-column:1/-1;
       color:#64748b;
       padding:20px;
-   }
-
-   .message{
-      position:fixed;
-      top:20px;
-      right:20px;
-      background:#fff;
-      padding:15px 20px;
-      border-radius:8px;
-      box-shadow:0 4px 12px rgba(0,0,0,.15);
-      display:flex;
-      align-items:center;
-      gap:15px;
-      z-index:1000;
    }
    </style>
 </head>
