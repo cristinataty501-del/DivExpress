@@ -8,8 +8,6 @@ if(isset($_POST['submit'])){
    $email = mysqli_real_escape_string($conn, $_POST['email']);
    $pass = mysqli_real_escape_string($conn, $_POST['password']);
    $cpass = mysqli_real_escape_string($conn, $_POST['cpassword']);
-   $bi = mysqli_real_escape_string($conn, $_POST['bi']);
-   $cpass = mysqli_real_escape_string($conn, $_POST['cpass']);
    $user_type = $_POST['user_type'];
 
    if (strlen($name) >= 3 && preg_match("/^[A-ZÀ-Ý][a-zà-ÿ]+(\s[A-ZÀ-Ý][a-zà-ÿ]+)+$/", $name)) {
@@ -25,7 +23,7 @@ if(isset($_POST['submit'])){
          $message[] = 'confirm password not matched!';
       }else{
          $cpass = md5($cpass);
-         mysqli_query($conn, "INSERT INTO `users`(name, email, password, user_type) VALUES('$name', '$email', '$cpass', '$user_type')") or die('query failed');
+         mysqli_query($conn, "INSERT INTO `users`(name, email, password, user_type) VALUES('$name', '$email', '$cpassword', '$user_type')") or die('query failed');
          $message[] = 'registered successfully!';
          header('location:login.php');
       }
