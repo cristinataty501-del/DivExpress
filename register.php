@@ -1,77 +1,98 @@
 <?php
+
 include 'config.php';
 
-// Initialize variables
-$message = array();
+$message = [];
 
 if(isset($_POST['submit'])){
-   
-   $name = mysqli_real_escape_string($conn, $_POST['name']);
-   $email = mysqli_real_escape_string($conn, $_POST['email']);
-   $pass = mysqli_real_escape_string($conn, $_POST['password']);
-   $cpass = mysqli_real_escape_string($conn, $_POST['cpassword']);
-   $user_type = mysqli_real_escape_string($conn, $_POST['user_type']);
-   
-   // Validation
-   $errors = array();
-   
-   // Validate name (at least 2 words, each starting with capital letter)
-   if (strlen($name) < 3 || !preg_match("/^[A-ZÀ-Ý][a-zà-ÿ]+(\s[A-ZÀ-Ý][a-zà-ÿ]+)+$/", $name)) {
-      $errors['name'] = 'Nome inválido. Use nome completo com letras maiúsculas.';
+
+   $name = mysqli_real_escape_string($conn, trim($_POST['name']));
+   $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+   $pass = trim($_POST['password']);
+   $cpass = trim($_POST['cpassword']);
+
+   // Tipos permitidos
+   $allowed_types = ['comp', 'vendf', 'vendemp'];
+
+   $user_type = trim($_POST['user_type']);
+
+   if(!in_array($user_type, $allowed_types)){
+      $user_type = 'comp';
    }
-   
-   // Validate email
-   if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-      $errors['email'] = 'Email inválido.';
+
+   $errors = [];
+
+   // Nome
+   if(strlen($name) < 3){
+      $errors[] = 'Nome inválido.';
    }
-   
-   // Check if email already exists
-   $check_email = mysqli_query($conn, "SELECT * FROM `users` WHERE email = '$email'");
+
+   // Email
+   if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+      $errors[] = 'Email inválido.';
+   }
+
+   // Email existente
+   $check_email = mysqli_query($conn, "SELECT id FROM users WHERE email='$email'");
+
    if(mysqli_num_rows($check_email) > 0){
-      $errors['email_exists'] = 'Este email já está registrado!';
+      $errors[] = 'Este email já está registrado!';
    }
-   
-   // Validate password
-   if (strlen($pass) < 8) {
-      $errors['password'] = 'Senha deve ter pelo menos 8 caracteres.';
+
+   // Senha
+   if(strlen($pass) < 8){
+      $errors[] = 'A senha deve ter pelo menos 8 caracteres.';
    }
-   
-   // Check if passwords match
-   if($pass != $cpass){
-      $errors['cpassword'] = 'Confirmar senha não corresponde!';
+
+   // Confirmar senha
+   if($pass !== $cpass){
+      $errors[] = 'As senhas não coincidem.';
    }
-   
-   // If no errors, proceed with registration
+
    if(empty($errors)){
-      // Hash the password
-      $hashed_pass = md5($pass);
-      
-      // Default image path (create a default avatar image in your uploads folder)
+
+      $password = md5($pass);
+
       $default_image = 'default-avatar.png';
-      
-      // Fixed INSERT query with default image
-      $insert_query = "INSERT INTO `users` (name, email, password, user_type, image) 
-                       VALUES ('$name', '$email', '$hashed_pass', '$user_type', '$default_image')";
-      
-      if(mysqli_query($conn, $insert_query)){
-         $message[] = 'Registrado com sucesso! Redirecionando...';
-         echo '<script>
-            setTimeout(function() {
-               window.location.href = "login.php";
-            }, 2000);
-         </script>';
-      } else {
-         $message[] = 'Erro ao registrar: ' . mysqli_error($conn);
+
+      $insert = mysqli_query($conn,"
+         INSERT INTO users
+         (
+            name,
+            email,
+            password,
+            user_type,
+            image
+         )
+         VALUES
+         (
+            '$name',
+            '$email',
+            '$password',
+            '$user_type',
+            '$default_image'
+         )
+      ");
+
+      if($insert){
+
+         header('Location: login.php?success=1');
+         exit();
+
+      }else{
+
+         $message[] = 'Erro ao registrar: '.mysqli_error($conn);
+
       }
-   } else {
-      // Collect all errors
-      foreach($errors as $error){
-         $message[] = $error;
-      }
+
+   }else{
+
+      $message = $errors;
+
    }
 }
-?>
 
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -370,11 +391,11 @@ if(isset($message) && !empty($message)){
       <input type="password" name="cpassword" placeholder="Confirmar senha" required class="box required" oninput="compararSenha()">
       <span class="span-required" id="cpassword-error" style="color: #dc2626; display: none;">Senhas não coincidem.</span>
       
-      <select name="user_type" class="box">
-         <option value="user_type">Comprador</option>
-         <option value="vendemp">Vendedor juridico</option>
-          <option value="vendef">Vendedor singular</option>
-      </select>
+      <select name="user_type" required>
+   <option value="comp">Comprador</option>
+   <option value="vendf">Vendedor Particular</option>
+   <option value="vendemp">Empresa</option>
+</select>
       
       <input type="submit" name="submit" value="Cadastrar" class="btn">
       <p>Já tens uma conta? <a href="login.php">Login</a></p>
