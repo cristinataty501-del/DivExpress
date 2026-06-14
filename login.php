@@ -3,49 +3,70 @@
 include 'config.php';
 session_start();
 
+$message = [];
+
 if(isset($_POST['submit'])){
 
-   $email = mysqli_real_escape_string($conn, $_POST['email']);
-   $pass = mysqli_real_escape_string($conn, $_POST['password']);
+   $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+   $pass  = trim($_POST['password']);
 
-   if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-       if (strlen($pass) >= 8) {
-   $pass = md5($pass);
-   $select_users = mysqli_query($conn, "SELECT * FROM `users` WHERE email = '$email' AND password = '$pass'") or die('query failed');
+   // Validar email
+   if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+      $message[] = "Email inválido.";
+   }
 
-   if(mysqli_num_rows($select_users) > 0){
+   // Validar senha
+   elseif(strlen($pass) < 8){
+      $message[] = "A senha deve ter pelo menos 8 caracteres.";
+   }
 
-      $row = mysqli_fetch_assoc($select_users);
+   else{
 
-      if($row['user_type'] == 'admin' || $row['user_type'] == 'vendf' || $row['user_type'] == 'vendemp'){
+      $password = md5($pass);
 
-         $_SESSION['admin_name'] = $row['name'];
-         $_SESSION['admin_email'] = $row['email'];
-         $_SESSION['admin_id'] = $row['id'];
+      $select_users = mysqli_query(
+         $conn,
+         "SELECT * FROM `users` WHERE email = '$email' AND password = '$password'"
+      ) or die(mysqli_error($conn));
 
-         header('location:admin_page.php');
+      if(mysqli_num_rows($select_users) > 0){
 
-      }elseif($row['user_type'] == 'comp'){
+         $row = mysqli_fetch_assoc($select_users);
 
-         $_SESSION['user_name'] = $row['name'];
-         $_SESSION['user_email'] = $row['email'];
-         $_SESSION['user_id'] = $row['id'];
-         header('location:home.php');
+         $user_type = trim($row['user_type']);
 
+         // ADMINISTRADOR E VENDEDORES
+         if(in_array($user_type, ['admin', 'vendf', 'vendemp'])){
+
+            $_SESSION['admin_name']  = $row['name'];
+            $_SESSION['admin_email'] = $row['email'];
+            $_SESSION['admin_id']    = $row['id'];
+
+            header('Location: admin_page.php');
+            exit();
+
+         }
+
+         // COMPRADOR
+         elseif($user_type === 'comp'){
+
+            $_SESSION['user_name']  = $row['name'];
+            $_SESSION['user_email'] = $row['email'];
+            $_SESSION['user_id']    = $row['id'];
+
+            header('Location: home.php');
+            exit();
+
+         }
+
+         else{
+            $message[] = "Tipo de utilizador não reconhecido.";
+         }
+
+      }else{
+         $message[] = "Email ou senha incorretos!";
       }
-
-   }else{
-      $message[] = 'Email ou senha incorreta!';
    }
-
-    }else{
- $message[] = "Senha deve ter pelo menos 8 caracteres.";
-   }
-   }else{
- $message[] = "Email errado.";
-   }
-   }else{
-
 }
 
 ?>

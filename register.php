@@ -371,9 +371,9 @@ if(isset($message) && !empty($message)){
       <span class="span-required" id="cpassword-error" style="color: #dc2626; display: none;">Senhas não coincidem.</span>
       
       <select name="user_type" class="box">
-         <option value="user">Comprador</option>
-         <option value="vendemp">Vendedor</option>
-         <option value="admin">Administrador</option>
+         <option value="user_type">Comprador</option>
+         <option value="vendemp">Vendedor juridico</option>
+          <option value="vendef">Vendedor singular</option>
       </select>
       
       <input type="submit" name="submit" value="Cadastrar" class="btn">
